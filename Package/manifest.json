@@ -1,0 +1,11 @@
+{
+    "name": "DivineFavorPowers",
+    "version_number": "1.0.0",
+    "website_url": "https://discord.gg/cjayride",
+    "description": "Makes TalentTree Divine Favor cycle Passive Powers instead of toggling them off.",
+    "dependencies": [
+        "denikson-BepInExPack_Valheim-5.4.2351",
+        "M2Valheim-TalentTree-2.3.0",
+        "Smoothbrain-PassivePowers-1.1.8"
+    ]
+}
