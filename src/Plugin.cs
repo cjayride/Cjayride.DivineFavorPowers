@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using BepInEx;
+using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
 
@@ -14,20 +15,22 @@ namespace Cjayride.DivineFavorPowers
     {
         public const string PluginGUID = "cjayride.divinefavorpowers";
         public const string PluginName = "DivineFavorPowers";
-        public const string PluginVersion = "1.0.0";
+        public const string PluginVersion = "1.0.6";
 
-        private const float HoldThreshold = 0.8f;
-        private const float CycleInterval = 0.8f;
-        private const string CycleFlag = "warcaller_divine_favor_cycle";
-        private const string EquippedKey = "PassivePowers GuardianPowers";
-
-        private static MethodInfo _hasTalent;
-        private static MethodInfo _activeEnabled;
-        private static bool _armed;
-        private static int _cycles;
+        private static ConfigEntry<KeyboardShortcut> _first;
+        private static ConfigEntry<KeyboardShortcut> _second;
+        private static MethodInfo _equipped;
+        private static int _pending = -1;
 
         private void Awake()
         {
+            _first = Config.Bind("Hotkeys", "First ability", new KeyboardShortcut(KeyCode.F),
+                "Activates the first boss power equipped on the stones.");
+            _second = Config.Bind("Hotkeys", "Second ability", new KeyboardShortcut(KeyCode.F, KeyCode.LeftShift),
+                "Activates the second boss power equipped on the stones.");
+            _first.SettingChanged += (_, _) => PushShortcuts();
+            _second.SettingChanged += (_, _) => PushShortcuts();
+
             bool talentTree = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("M2Valheim.TalentTree");
             bool passivePowers = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("org.bepinex.plugins.passivepowers");
             if (!talentTree || !passivePowers)
@@ -36,9 +39,27 @@ namespace Cjayride.DivineFavorPowers
                 return;
             }
 
+            Type utils = AccessTools.TypeByName("PassivePowers.Utils");
+            _equipped = AccessTools.Method(utils, "getPassivePowers", new[] { typeof(Player) });
+            PushShortcuts();
             RemoveTalentTreeCycle();
-            new Harmony(PluginGUID).PatchAll(typeof(CyclePatch));
-            Logger.LogInfo("DivineFavorPowers " + PluginVersion + " loaded. Rank 3 cycles equipped Passive Powers.");
+            new Harmony(PluginGUID).PatchAll(typeof(FirePatch));
+            Logger.LogInfo("DivineFavorPowers " + PluginVersion + " loaded. Stones set the powers. Hotkeys fire them.");
+        }
+
+        private static void PushShortcuts()
+        {
+            if (!BepInEx.Bootstrap.Chainloader.PluginInfos.TryGetValue("org.bepinex.plugins.passivepowers", out var plugin))
+                return;
+
+            SetShortcut(plugin.Instance.Config, 1, _first.Value);
+            SetShortcut(plugin.Instance.Config, 2, _second.Value);
+        }
+
+        private static void SetShortcut(ConfigFile config, int slot, KeyboardShortcut key)
+        {
+            if (config.TryGetEntry("2 - Active Powers", "Shortcut for boss power " + slot, out ConfigEntry<KeyboardShortcut> entry))
+                entry.Value = key;
         }
 
         private void RemoveTalentTreeCycle()
@@ -60,22 +81,6 @@ namespace Cjayride.DivineFavorPowers
             Logger.LogInfo("Removed TalentTree Divine Favor cycle. Cooldown reduction is unchanged.");
         }
 
-        private static bool CanCycle(Player player)
-        {
-            if (_hasTalent == null)
-            {
-                Type service = AccessTools.TypeByName("Core.TalentRuntimeService");
-                _hasTalent = AccessTools.Method(service, "HasTalent", new[] { typeof(Player), typeof(string) });
-            }
-
-            if (_hasTalent == null || player == null)
-            {
-                return false;
-            }
-
-            return (bool)_hasTalent.Invoke(null, new object[] { player, CycleFlag });
-        }
-
         private static bool ModifierHeld()
         {
             return Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)
@@ -83,153 +88,115 @@ namespace Cjayride.DivineFavorPowers
                 || Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
         }
 
-        private static bool ShouldDefer(Player player)
+        private static bool Matches(KeyboardShortcut shortcut, bool gpDown)
         {
-            return player == Player.m_localPlayer
-                && ZInput.GetButtonDown("GP")
-                && player.TakeInput()
-                && !Hud.InRadial()
-                && !Hud.IsPieceSelectionVisible()
-                && !ModifierHeld()
-                && CanCycle(player);
-        }
-
-        private static bool ActivePowerEnabled(string power)
-        {
-            if (_activeEnabled == null)
-            {
-                Type utils = AccessTools.TypeByName("PassivePowers.Utils");
-                _activeEnabled = AccessTools.Method(utils, "ActivePowerEnabled", new[] { typeof(string) });
-            }
-
-            if (_activeEnabled == null)
-            {
+            if (shortcut.MainKey == KeyCode.None)
                 return false;
+
+            bool down = Input.GetKeyDown(shortcut.MainKey) || (shortcut.MainKey == KeyCode.F && gpDown);
+            if (!down)
+                return false;
+
+            bool needsModifier = false;
+            foreach (KeyCode modifier in shortcut.Modifiers)
+            {
+                if (modifier == KeyCode.None)
+                    continue;
+
+                needsModifier = true;
+                if (!Input.GetKey(modifier) && !SameSide(modifier))
+                    return false;
             }
 
-            return (bool)_activeEnabled.Invoke(null, new object[] { power });
+            return needsModifier || !ModifierHeld();
         }
 
-        private static List<string> EquippedPowers(Player player)
+        private static bool SameSide(KeyCode modifier)
         {
-            string list = player.m_guardianPower;
-            if (string.IsNullOrWhiteSpace(list))
-            {
-                return new List<string>();
-            }
-
-            return new List<string>(list.Split(','));
+            if (modifier == KeyCode.LeftShift || modifier == KeyCode.RightShift)
+                return Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            if (modifier == KeyCode.LeftControl || modifier == KeyCode.RightControl)
+                return Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+            if (modifier == KeyCode.LeftAlt || modifier == KeyCode.RightAlt)
+                return Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+            return false;
         }
 
-        private static void WriteEquipped(Player player, List<string> powers)
+        private static void Activate(Player player, int slot)
         {
-            string joined = string.Join(",", powers);
-            player.m_guardianPower = joined;
-            player.m_nview?.GetZDO()?.Set(EquippedKey, joined);
-        }
-
-        private static void ActivateFirst(Player player)
-        {
-            List<string> powers = EquippedPowers(player);
-            if (powers.Count == 0 || string.IsNullOrEmpty(powers[0]))
-            {
+            if (_equipped == null || player != Player.m_localPlayer)
                 return;
-            }
 
-            string power = powers[0];
-            if (!ActivePowerEnabled(power))
-            {
+            var powers = _equipped.Invoke(null, new object[] { player }) as List<string>;
+            if (powers == null || slot < 0 || slot >= powers.Count || string.IsNullOrEmpty(powers[slot]))
                 return;
-            }
 
+            string power = powers[slot];
             StatusEffect vanilla = ObjectDB.instance.GetStatusEffect(power.GetStableHashCode());
             StatusEffect passive = ObjectDB.instance.GetStatusEffect(("PassivePowers " + power).GetStableHashCode());
             if (vanilla == null || passive == null)
-            {
                 return;
-            }
 
             player.m_guardianSE = vanilla;
             player.StartGuardianPower();
             player.m_guardianSE = passive;
         }
 
-        private static void Rotate(Player player)
-        {
-            List<string> powers = EquippedPowers(player);
-            if (powers.Count == 0)
-            {
-                return;
-            }
-
-            if (powers.Count > 1)
-            {
-                string first = powers[0];
-                powers.RemoveAt(0);
-                powers.Add(first);
-                WriteEquipped(player, powers);
-            }
-
-            StatusEffect shown = ObjectDB.instance.GetStatusEffect(powers[0].GetStableHashCode());
-            if (shown != null)
-            {
-                player.Message(MessageHud.MessageType.Center, shown.m_name, 0, shown.m_icon);
-            }
-        }
-
         [HarmonyPatch]
-        private static class CyclePatch
+        private static class FirePatch
         {
             [HarmonyPrefix]
-            [HarmonyPatch(typeof(Player), nameof(Player.StartGuardianPower))]
-            private static bool BlockPlainPress(Player __instance)
+            [HarmonyPatch(typeof(Player), nameof(Player.Update))]
+            private static void CatchPress(Player __instance)
             {
-                return !ShouldDefer(__instance);
+                _pending = -1;
+                if (__instance != Player.m_localPlayer || !__instance.TakeInput() || Hud.InRadial() || Hud.IsPieceSelectionVisible())
+                    return;
+
+                bool gpDown = ZInput.GetButtonDown("GP");
+                if (Matches(_second.Value, gpDown))
+                    _pending = 1;
+                else if (Matches(_first.Value, gpDown))
+                    _pending = 0;
             }
 
             [HarmonyPostfix]
             [HarmonyPatch(typeof(Player), nameof(Player.Update))]
-            private static void TrackHold(Player __instance)
+            private static void Fire(Player __instance)
             {
-                if (__instance != Player.m_localPlayer)
+                int slot = _pending;
+                _pending = -1;
+                if (slot >= 0)
+                    Activate(__instance, slot);
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(Player), nameof(Player.StartGuardianPower))]
+            private static bool BlockVanilla(Player __instance)
+            {
+                if (CalledFromUs())
+                    return true;
+
+                if (__instance == Player.m_localPlayer && (__instance.m_guardianPower?.Contains(",") ?? false))
+                    return false;
+
+                if (ModifierHeld() && ZInput.GetButton("GP"))
+                    return false;
+
+                return true;
+            }
+
+            private static bool CalledFromUs()
+            {
+                var trace = new System.Diagnostics.StackTrace();
+                for (int i = 0; i < trace.FrameCount; i++)
                 {
-                    return;
+                    string name = trace.GetFrame(i).GetMethod()?.DeclaringType?.FullName;
+                    if (name != null && name.StartsWith("Cjayride.DivineFavorPowers"))
+                        return true;
                 }
 
-                if (ZInput.GetButtonDown("GP"))
-                {
-                    _armed = ShouldDefer(__instance);
-                    _cycles = 0;
-                    return;
-                }
-
-                if (!_armed)
-                {
-                    return;
-                }
-
-                if (!ZInput.GetButton("GP"))
-                {
-                    _armed = false;
-                    if (_cycles == 0)
-                    {
-                        ActivateFirst(__instance);
-                    }
-
-                    return;
-                }
-
-                if (!__instance.TakeInput())
-                {
-                    _armed = false;
-                    return;
-                }
-
-                if (ZInput.GetButtonPressedTimer("GP") >= HoldThreshold + _cycles * CycleInterval)
-                {
-                    _cycles++;
-                    Rotate(__instance);
-                }
+                return false;
             }
         }
     }

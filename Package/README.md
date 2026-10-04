@@ -23,3 +23,13 @@ Valheim/BepInEx/plugins/cjayride-DivineFavorPowers/Cjayride.DivineFavorPowers.dl
 Do not copy `manifest.json`, `README.md`, or `icon.png` into the game.
 
 Replace `icon.png` (exactly 256×256) before uploading to Thunderstore, Hexium, or Nexus if you are packaging this yourself.
+
+## Contact
+-  𝕏: x.com/cjayride
+   
+-  Discord: discord.gg/cjayride (find me at the top of the user list) "cjayride"
+   
+-  Twitch: twitch.tv/cjayride
+   
+## AI Generated
+This code was not AI Generated, however, AI was used to verify that it works with the new version of the game.

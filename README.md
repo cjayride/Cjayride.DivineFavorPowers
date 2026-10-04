@@ -1,5 +1,35 @@
 # Divine Favor Powers
 
-Client-only Valheim mod. Divine Favor no longer turns Passive Powers off. At max rank, tap the guardian-power key to burst the first equipped power. Hold it to rotate which equipped power is first.
+Client-only Valheim mod. Divine Favor no longer turns Passive Powers off. At max rank, tap the guardian-power key to burst the first equipped power. Hold it to rotate which equipped power is first. Shift and the other Passive Powers hotkeys are left alone. Boss stones still equip and unequip powers. TalentTree's cooldown cut is unchanged.
 
-See `Package/README.md` for store install notes.
+**Client only.** Dedicated servers do not need this.
+
+## Requires
+
+- [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/)
+- [TalentTree](https://thunderstore.io/c/valheim/p/M2Valheim/TalentTree/)
+- [Passive Powers](https://thunderstore.io/c/valheim/p/Smoothbrain/PassivePowers/)
+
+## Install
+
+**Thunderstore, Gale, or r2modman:** install the package.
+
+**Nexus or a manual zip:** copy `plugins/cjayride-DivineFavorPowers` into `Valheim/BepInEx/plugins`. You should end up with:
+
+```
+Valheim/BepInEx/plugins/cjayride-DivineFavorPowers/Cjayride.DivineFavorPowers.dll
+```
+
+Do not copy `manifest.json`, `README.md`, or `icon.png` into the game.
+
+Replace `icon.png` (exactly 256×256) before uploading to Thunderstore, Hexium, or Nexus if you are packaging this yourself.
+
+## Contact
+-  𝕏: x.com/cjayride
+   
+-  Discord: discord.gg/cjayride (find me at the top of the user list) "cjayride"
+   
+-  Twitch: twitch.tv/cjayride
+   
+## AI Generated
+This code was not AI Generated, however, AI was used to verify that it works with the new version of the game.

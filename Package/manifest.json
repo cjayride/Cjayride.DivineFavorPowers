@@ -1,6 +1,6 @@
 {
     "name": "DivineFavorPowers",
-    "version_number": "1.0.0",
+    "version_number": "1.0.6",
     "website_url": "https://discord.gg/cjayride",
     "description": "Makes TalentTree Divine Favor cycle Passive Powers instead of toggling them off.",
     "dependencies": [
