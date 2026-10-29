@@ -1,3 +1,8 @@
+# 1.0.7
+
+- Verified against Valheim 1.0.21 (Release build).
+- BepInEx dependency set to `denikson-BepInExPack_Valheim-5.4.2360`.
+
 # 1.0.6
 
 - Equipped stones start on their hotkey. The "cannot be activated" check was a personal kill counter that did not have the boss kills.

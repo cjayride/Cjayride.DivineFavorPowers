@@ -15,7 +15,7 @@ namespace Cjayride.DivineFavorPowers
     {
         public const string PluginGUID = "cjayride.divinefavorpowers";
         public const string PluginName = "DivineFavorPowers";
-        public const string PluginVersion = "1.0.6";
+        public const string PluginVersion = "1.0.7";
 
         private static ConfigEntry<KeyboardShortcut> _first;
         private static ConfigEntry<KeyboardShortcut> _second;

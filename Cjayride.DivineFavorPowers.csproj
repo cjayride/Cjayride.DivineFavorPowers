@@ -7,7 +7,7 @@
     <Nullable>disable</Nullable>
     <AssemblyName>Cjayride.DivineFavorPowers</AssemblyName>
     <RootNamespace>Cjayride.DivineFavorPowers</RootNamespace>
-    <Version>1.0.6</Version>
+    <Version>1.0.7</Version>
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
