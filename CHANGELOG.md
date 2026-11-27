@@ -1,3 +1,13 @@
+# 1.0.9
+
+- TalentTree 3.0+: disable Divine Favor hold-cycle via `OnPlayerUpdatePostfix` (aggregated `Player.Update` patch). Still unpatches `StartGuardianPowerPrefix` and supports pre-3.0 `UpdatePostfix`.
+- Look up TalentTree cycle methods with reflection so HarmonyX does not warn about missing `UpdatePostfix` on 3.0.
+
+# 1.0.8
+
+- Re-checked against Valheim 1.0.21 (current Steam build).
+- Faster hotkey path: no stack traces, no per-player pending reset, cached shortcuts and status effects.
+
 # 1.0.7
 
 - Verified against Valheim 1.0.21 (Release build).
